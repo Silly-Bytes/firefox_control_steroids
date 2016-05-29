@@ -21,7 +21,8 @@ Every command start with the Ratpoison prefix + 'f' like so:
         r           Reddit
         g           Github
         o           Open a new tab
-        /           Search for the current content in the clipboard
+        s           Search for the current content in the clipboard
+        /           Jump to the tab with url mathing a user input
 
 
 What does this do?, you might be wondering...
@@ -46,7 +47,7 @@ The `o` commands is self explanatory, the only advantage of this one is the
 ability to have a fast new tab no matter where you are, which window has the
 focus, or if Firefox is running or not.
 
-The `/` command is quite nice, here is an use case:
+The `s` command is quite nice, here is an use case:
 
 You're compiling some code, but the compiler complains with a cryptic message,
 so you use [tmux to copy the error
@@ -54,6 +55,9 @@ message](https://github.com/alx741/dotfiles/blob/master/tmux/.tmux.conf#L55-L59)
 then issue the key sequence `C-t f /` and BANG!, no matter what, a new Firefox
 tab is just in front of you with the Google results of your error message. And
 this is applicable to any content in your clipboard as well!
+
+The `/` command prompts the user for a query and jumps to the tab which URL
+contains the query as a substring.
 
 
 ## How to
@@ -77,10 +81,12 @@ Some extra `~/.ratpoisonrc` is needed for the new mappings:
     newkmap firefox
     definekey firefox f exec ~/.scripts/ratpoison/firefox.sh select_tab facebook
     definekey firefox y exec ~/.scripts/ratpoison/firefox.sh select_tab youtube
+    definekey firefox e exec ~/.scripts/ratpoison/firefox.sh select_tab evirtual
     definekey firefox r exec ~/.scripts/ratpoison/firefox.sh select_tab reddit
     definekey firefox g exec ~/.scripts/ratpoison/firefox.sh select_tab github
     definekey firefox o exec ~/.scripts/ratpoison/firefox.sh new_tab
-    definekey firefox slash exec ~/.scripts/ratpoison/firefox.sh search
+    definekey firefox s exec ~/.scripts/ratpoison/firefox.sh clipboard_search
+    definekey firefox slash exec ~/.scripts/ratpoison/firefox.sh search_tab
     bind f readkey firefox
 
 
@@ -157,6 +163,9 @@ invoked from the Ratpoison configuration, will glue it all together.
             'github')
                 URL="www.github.com"
                 ;;
+            'evirtual')
+                URL="evirtual.ucuenca.edu.ec"
+                ;;
         esac
     }
 
@@ -171,7 +180,13 @@ invoked from the Ratpoison configuration, will glue it all together.
         fi
     }
 
-    function search {
+    function search_tab {
+        query=`ratpoison -c "prompt [Tab] >  "`
+        if [[ "$query" == "" ]]; then exit 0; fi
+        select_tab "$query"
+    }
+
+    function clipboard_search {
         search=$(xclip -selection clipboard -o)
         if [[ "$search" == "" ]]; then
             exit 0
@@ -181,16 +196,21 @@ invoked from the Ratpoison configuration, will glue it all together.
         firefox --new-tab "$google_url"
     }
 
-    ~/.scripts/ratpoison/app_select.sh firefox
     case $1 in
         'select_tab')
+            ~/.scripts/ratpoison/app_select.sh firefox
             select_tab $2
             ;;
+        'search_tab')
+            search_tab
+            ;;
         'new_tab')
+            ~/.scripts/ratpoison/app_select.sh firefox
             firefox --new-tab "http://"
             ;;
-        'search')
-            search
+        'clipboard_search')
+            ~/.scripts/ratpoison/app_select.sh firefox
+            clipboard_search
             ;;
     esac
 
