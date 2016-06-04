@@ -21,8 +21,10 @@ Every command start with the Ratpoison prefix + 'f' like so:
         r           Reddit
         g           Github
         o           Open a new tab
+        w           Open a new window
         s           Search for the current content in the clipboard
         /           Jump to the tab with url mathing a user input
+        l           Open a new tab with the lyrics of the currenlty playing song (mpd)
 
 
 What does this do?, you might be wondering...
@@ -59,6 +61,9 @@ this is applicable to any content in your clipboard as well!
 The `/` command prompts the user for a query and jumps to the tab which URL
 contains the query as a substring.
 
+The `l` will take the name of the currently playing song in MPD, google it, and
+open the first google result for the song lyrics in a new tab.
+
 
 ## How to
 
@@ -85,7 +90,9 @@ Some extra `~/.ratpoisonrc` is needed for the new mappings:
     definekey firefox r exec ~/.scripts/ratpoison/firefox.sh select_tab reddit
     definekey firefox g exec ~/.scripts/ratpoison/firefox.sh select_tab github
     definekey firefox o exec ~/.scripts/ratpoison/firefox.sh new_tab
+    definekey firefox w exec ~/.scripts/ratpoison/firefox.sh new_window
     definekey firefox s exec ~/.scripts/ratpoison/firefox.sh clipboard_search
+    definekey firefox l exec ~/.scripts/ratpoison/firefox.sh search_lyrics
     definekey firefox slash exec ~/.scripts/ratpoison/firefox.sh search_tab
     bind f readkey firefox
 
@@ -197,6 +204,22 @@ function clipboard_search {
     firefox --new-tab "$google_url"
 }
 
+function search_lyrics {
+    search=$(mpc | head -n 1)
+    if [[ "$search" == "" ]]; then
+        exit 0
+    fi
+    search+=" lyrics"
+    search=$(echo "$search" | sed 's/ /+/g')
+    curl -A 'Mozilla/5.0 (X11; Linux i586; rv:31.0) Gecko/20100101 Firefox/31.0'\
+        "https://www.google.com/search?q=$search"\
+            > /tmp/google_search_result.html
+    url=$(sed 's/>/>\r\n/g' /tmp/google_search_result.html\
+        | grep -m 1 '<a href="http:.*".*>'\
+        | sed -e 's/.*href="\([^"]*\)".*/\1/')
+    firefox --new-tab "$url"
+}
+
 case $1 in
     'select_tab')
         ~/.scripts/ratpoison/app_select.sh firefox
@@ -207,11 +230,19 @@ case $1 in
         ;;
     'new_tab')
         ~/.scripts/ratpoison/app_select.sh firefox
-        firefox --new-tab "http://"
+        firefox --new-tab "http://www.google.com"
+        ;;
+    'new_window')
+        ratpoison -c "nextscreen"
+        firefox --new-window "http://www.google.com"
         ;;
     'clipboard_search')
         ~/.scripts/ratpoison/app_select.sh firefox
         clipboard_search
+        ;;
+    'search_lyrics')
+        ~/.scripts/ratpoison/app_select.sh firefox
+        search_lyrics
         ;;
 esac
 ```
